@@ -11,33 +11,13 @@ import data from './revenue-by-year.json';
 })
 export class AppComponent implements AfterViewInit {
   title = 'charts';
-  public chartHTML!: string;
-
   customerData: ICustomerData = data;
   aggregateYear!: { [key: number]: number };
   aggregateMonth!: { [key: string]: number };
   @ViewChild('yearchart') yearChart!: ElementRef;
-  ngAfterViewInit() {
-    // for (let customerData of this.customerData.data) {
-    //   let year:IAggregateAmountYear
-    //   for (let period of customerData.periods) {
-    //     const bobExists = customerData.periods.some(
-    //       (person) => person.year === period.year
-    //     );
-    //     if (!bobExists) {
-    //       year = {
-    //         year: period.year,
-    //         amount: 0,
-    //         month:[{
-    //           month:period.period,
-    //           amount:period.amt
-    //         }]
-    //       };
-
-    //     }
-    //     this.aggregateYear.push(year);
-    //   }
-    // }
+  
+  ngAfterViewInit(): void {
+    // get the aggregate amount group by year
     this.aggregateYear = this.customerData.data.reduce((acc, customer) => {
       customer.periods.forEach((period) => {
         if (!acc[period.year]) {
@@ -48,6 +28,7 @@ export class AppComponent implements AfterViewInit {
       return acc;
     }, {} as { [key: number]: number });
 
+    // get the aggregate amount group by month
     this.aggregateMonth = this.customerData.data.reduce((acc, customer) => {
       customer.periods.forEach((period) => {
         const { year, period: month } = period;
@@ -59,7 +40,8 @@ export class AppComponent implements AfterViewInit {
       });
       return acc;
     }, {} as { [key: string]: number });
-    console.log(this.aggregateMonth);
+
+    // initialize highcharts
     const chartOptions: Highcharts.Options = {
       chart: {
         type: 'column',
