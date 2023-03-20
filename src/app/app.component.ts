@@ -3,6 +3,8 @@ import { Component, ElementRef, ViewChild } from '@angular/core';
 import * as Highcharts from 'highcharts';
 import { IAggregateAmountYear, ICustomerData } from './app.service';
 import data from './revenue-by-year.json';
+import Drilldown from 'highcharts/modules/drilldown';
+Drilldown(Highcharts);
 
 @Component({
   selector: 'app-root',
@@ -15,7 +17,7 @@ export class AppComponent implements AfterViewInit {
   aggregateYear!: { [key: number]: number };
   aggregateMonth!: { [key: string]: number };
   @ViewChild('yearchart') yearChart!: ElementRef;
-  
+
   ngAfterViewInit(): void {
     // get the aggregate amount group by year
     this.aggregateYear = this.customerData.data.reduce((acc, customer) => {
@@ -40,9 +42,10 @@ export class AppComponent implements AfterViewInit {
       });
       return acc;
     }, {} as { [key: string]: number });
-
+    console.log(this.aggregateYear)
+    console.log(this.aggregateMonth)
     // initialize highcharts
-    const chartOptions: Highcharts.Options = {
+    Highcharts.chart('yearchart', {
       chart: {
         type: 'column',
       },
@@ -74,12 +77,11 @@ export class AppComponent implements AfterViewInit {
       drilldown: {
         series: Object.keys(this.aggregateMonth).map((key) => ({
           type: 'line',
-          id: key,
-          name: key,
+          id: key.substring(0,4),
+          name:key.substring(0,4),
           data: [this.aggregateMonth[key]],
         })),
       },
-    };
-    Highcharts.chart(this.yearChart.nativeElement, chartOptions);
+    });
   }
 }
