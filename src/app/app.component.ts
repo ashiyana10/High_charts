@@ -5,7 +5,12 @@ import { IAggregateAmountYear, ICustomerData } from './app.service';
 import data from './revenue-by-year.json';
 import Drilldown from 'highcharts/modules/drilldown';
 Drilldown(Highcharts);
-
+interface IDrill {
+  name: number;
+  type: string;
+  id: number;
+  data: Array<[string, number]>;
+}
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -17,34 +22,47 @@ export class AppComponent implements AfterViewInit {
   aggregateYear!: { [key: number]: number };
   aggregateMonth!: { [key: string]: number };
   @ViewChild('yearchart') yearChart!: ElementRef;
-
+  years: number[] = [];
+  drilldownSeries: IDrill[] = [];
   ngAfterViewInit(): void {
-    // get the aggregate amount group by year
-    this.aggregateYear = this.customerData.data.reduce((acc, customer) => {
-      customer.periods.forEach((period) => {
-        if (!acc[period.year]) {
-          acc[period.year] = 0;
-        }
-        acc[period.year] += period.amt;
-      });
-      return acc;
-    }, {} as { [key: number]: number });
+    // Aggregate data by year
 
-    // get the aggregate amount group by month
-    this.aggregateMonth = this.customerData.data.reduce((acc, customer) => {
+    this.customerData.data.forEach((customer) => {
       customer.periods.forEach((period) => {
-        const { year, period: month } = period;
-        const key = `${year}-${month}`;
-        if (!acc[key]) {
-          acc[key] = 0;
+        if (this.years.hasOwnProperty(period.year)) {
+          this.years[period.year] += period.amt;
+        } else {
+          this.years[period.year] = period.amt;
         }
-        acc[key] += period.amt;
       });
-      return acc;
-    }, {} as { [key: string]: number });
-    console.log(this.aggregateYear)
-    console.log(this.aggregateMonth)
-    // initialize highcharts
+    });
+
+    // Create year series for chart
+    const yearSeries = Object.keys(this.years).map((year) => {
+      return { name: year, y: this.years[Number(year)], drilldown: year };
+    });
+
+    // Create drilldown series for each year
+
+    Object.keys(this.years).forEach((year) => {
+      const yearData: Array<[string, number]> = this.customerData.data.map(
+        (customer) => {
+          const amt = customer.periods
+            .filter((period) => period.year === Number(year))
+            .reduce((sum, period) => sum + period.amt, 0);
+          return ['a', amt];
+        }
+      );
+
+      this.drilldownSeries.push({
+        name: Number(year),
+        type: 'line',
+        id: Number(year),
+        data: yearData,
+      });
+    });
+    console.log(yearSeries);
+    console.log(this.drilldownSeries[0]);
     Highcharts.chart('yearchart', {
       chart: {
         type: 'column',
@@ -53,7 +71,7 @@ export class AppComponent implements AfterViewInit {
         text: 'Year-wise Data',
       },
       xAxis: {
-        categories: Object.keys(this.aggregateYear),
+        categories: Object.keys(this.years),
         title: {
           text: 'Year',
         },
@@ -67,20 +85,11 @@ export class AppComponent implements AfterViewInit {
         {
           type: 'line',
           name: 'Data',
-          data: Object.keys(this.aggregateYear).map((key) => ({
-            name: key,
-            y: this.aggregateYear[Number(key)],
-            drilldown: key,
-          })),
+          data: yearSeries,
         },
       ],
       drilldown: {
-        series: Object.keys(this.aggregateMonth).map((key) => ({
-          type: 'line',
-          id: key.substring(0,4),
-          name:key.substring(0,4),
-          data: [this.aggregateMonth[key]],
-        })),
+        series: this.drilldownSeries,
       },
     });
   }
